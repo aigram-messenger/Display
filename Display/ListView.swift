@@ -240,7 +240,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     
     private let waitingForNodesDisposable = MetaDisposable()
 
-    override public init() {
+    public var additionalTopInset: CGFloat
+
+    public init(additionalTopInset: CGFloat = 0.0) {
         class DisplayLinkProxy: NSObject {
             weak var target: ListView?
             init(target: ListView) {
@@ -255,6 +257,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.transactionQueue = ListViewTransactionQueue()
         
         self.scroller = ListViewScroller()
+        self.additionalTopInset = additionalTopInset
         
         super.init()
         
@@ -1219,6 +1222,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             if let updateSizeAndInsets = updateSizeAndInsets , (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets)) {
                 self.visibleSize = updateSizeAndInsets.size
                 self.insets = updateSizeAndInsets.insets
+                self.insets.top += additionalTopInset
                 self.ensureTopInsetForOverlayHighlightedItems = updateSizeAndInsets.ensureTopInsetForOverlayHighlightedItems
                 
                 let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
@@ -2270,6 +2274,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     offsetFix += additionalScrollDistance
                     
                     self.insets = updateSizeAndInsets.insets
+                    self.insets.top += additionalTopInset
                     self.ensureTopInsetForOverlayHighlightedItems = updateSizeAndInsets.ensureTopInsetForOverlayHighlightedItems
                     self.visibleSize = updateSizeAndInsets.size
                     
