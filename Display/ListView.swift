@@ -138,6 +138,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
     }
+
+    private var customContentOffset: CGFloat = 0.0
+    private var isScrolling: Bool = false
     
     public final var stackFromBottom: Bool = false
     public final var stackFromBottomInsetItemFactor: CGFloat = 0.0
@@ -217,6 +220,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var beganInteractiveDragging: () -> Void = { }
     public final var didEndScrolling: (() -> Void)?
+
+    public final var didEndScroll: (() -> Void)?
+    public final var didScroll: ((CGFloat) -> Void)?
     
     public final var reorderItem: (Int, Int, Any?) -> Signal<Bool, NoError> = { _, _, _ in return .single(false) }
     
@@ -508,6 +514,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     }
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        isScrolling = true
         self.lastContentOffsetTimestamp = 0.0
         self.resetHeaderItemsFlashTimer(start: false)
         self.updateHeaderItemsFlashing(animated: true)
@@ -532,9 +539,13 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             self.lastContentOffsetTimestamp = 0.0
             self.didEndScrolling?()
         }
+        if !isDeceleratingAfterTracking {
+            didEndScroll?()
+        }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        didEndScroll?()
         self.lastContentOffsetTimestamp = 0.0
         self.isDeceleratingAfterTracking = false
         self.resetHeaderItemsFlashTimer(start: true)
@@ -552,6 +563,20 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         let deltaY = scrollView.contentOffset.y - self.lastContentOffset.y
         
+
+        switch visibleContentOffset() {
+        case let .known(offset):
+            customContentOffset = offset
+        case .none:
+            customContentOffset += deltaY
+        case .unknown:
+            customContentOffset += deltaY
+        }
+
+        if scroller.contentOffset.y + scroller.bounds.height <= scroller.contentSize.height {
+            didScroll?(customContentOffset)
+        }
+
         self.lastContentOffset = scrollView.contentOffset
         if !self.lastContentOffsetTimestamp.isZero {
             self.lastContentOffsetTimestamp = CACurrentMediaTime()
